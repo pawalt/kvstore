@@ -15,11 +15,19 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "start in server mode",
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			log.Fatal("expected a filepath but got none")
+		}
+
 		log.Info("starting server")
-		srv := server.New()
-		err := srv.Serve()
+		srv, err := server.New(args[0])
 		if err != nil {
-			log.Error(err)
+			log.Fatal(err)
+		}
+
+		err = srv.Serve()
+		if err != nil {
+			log.Fatal(err)
 		}
 	},
 }

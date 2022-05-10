@@ -1,12 +1,15 @@
 package server
 
 import (
+	"bufio"
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
 	"strconv"
 
 	"github.com/pawalt/kvstore/pkg/kv"
+	"github.com/pawalt/kvstore/pkg/persist"
 )
 
 const (
@@ -15,13 +18,29 @@ const (
 )
 
 type KVServer struct {
-	root kv.KVNode
+	root   kv.KVNode
+	writer *bufio.Writer
+	file   *os.File
 }
 
-func New() *KVServer {
-	return &KVServer{
-		root: kv.NewMapVKNode(),
+func New(filePath string) (*KVServer, error) {
+	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return nil, err
 	}
+
+	r := bufio.NewReader(f)
+	rootNode, err := persist.Restore(r)
+	if err != nil {
+		return nil, err
+	}
+
+	w := bufio.NewWriter(f)
+
+	return &KVServer{
+		root:   rootNode,
+		writer: w,
+	}, nil
 }
 
 func (k *KVServer) Serve() error {
