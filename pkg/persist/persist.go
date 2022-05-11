@@ -23,11 +23,11 @@ func WriteOp(f *os.File, w *bufio.Writer, path []string, data []byte) error {
 	}
 
 	// ensure disk persistence
-	f.Sync()
+	err = f.Sync()
 	// getting "invalid argument" here. need to test that an fsync is ok
-	/*if err != nil {
+	if err != nil {
 		return fmt.Errorf("error while syncing: %v", err)
-	}*/
+	}
 
 	return nil
 }

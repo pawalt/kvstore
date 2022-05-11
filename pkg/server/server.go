@@ -40,6 +40,7 @@ func New(filePath string) (*KVServer, error) {
 	return &KVServer{
 		root:   rootNode,
 		writer: w,
+		file:   f,
 	}, nil
 }
 
