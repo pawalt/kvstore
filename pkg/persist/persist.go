@@ -31,6 +31,38 @@ func WriteOp(f *os.File, w *bufio.Writer, path []string, data []byte) error {
 	return nil
 }
 
+type Write struct {
+	Path  []string
+	Value []byte
+}
+
+func BatchWrite(f *os.File, w *bufio.Writer, ops []*Write) error {
+	var sb strings.Builder
+	for _, op := range ops {
+		formatted := "WRITE\t" + strings.Join(op.Path, "/") + "\t" + string(op.Value) + "\n"
+		sb.WriteString(formatted)
+	}
+
+	_, err := w.WriteString(sb.String())
+	if err != nil {
+		return fmt.Errorf("error when writing to buffered reader: %v", err)
+	}
+
+	// flush to underlying writer
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("error while flushing: %v", err)
+	}
+
+	// ensure disk persistence
+	err = f.Sync()
+	if err != nil {
+		return fmt.Errorf("error while syncing: %v", err)
+	}
+
+	return nil
+}
+
 func Restore(r *bufio.Reader) (kv.KVNode, error) {
 	node := kv.NewMapVKNode()
 

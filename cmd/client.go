@@ -44,7 +44,7 @@ var getCommand = &cobra.Command{
 			Path: path,
 		}
 		getResp := server.GetResponse{}
-		err = client.Call("KVServer.Get", &getReq, &getResp)
+		err = client.Call("KVServer.GetRPC", &getReq, &getResp)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -81,7 +81,7 @@ var putCommand = &cobra.Command{
 			Value: []byte(args[1]),
 		}
 		putResp := server.PutResponse{}
-		err = client.Call("KVServer.Put", &putReq, &putResp)
+		err = client.Call("KVServer.PutRPC", &putReq, &putResp)
 		if err != nil {
 			log.Fatal(err)
 		}
