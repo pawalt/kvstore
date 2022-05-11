@@ -1,4 +1,18 @@
-before vectorized execution
+# KVStore
+
+I read a [great blog post](http://justinjaffray.com/durability-and-redo-logging/) on durability, and I wanted to try it out for myself!
+
+The goal here is to understand how `fsync` impacts performance.
+
+## High-Level Architecture
+
+For this project, I have a nested key/value store. This is stored in-memory via a recursive struct. Nodes can both have values and children.
+
+Operations are persisted to disk via a Write-Ahead Log in the format `WRITE <keypath> <data>`.
+
+## First Pass
+
+For my first pass, each operation results in a write to the log and an `fsync` so that we can guarantee durability. One run of the test takes about 20ms:
 
 ```bash
 $ go test -bench=. -count 5
@@ -15,7 +29,17 @@ PASS
 ok      github.com/pawalt/kvstore       10.723s
 ```
 
-vectorized execution with queue size of 10 - **10x improvement**
+## Second Pass
+
+`fsync` is very expensive, so hopefully, if we can reduce the number of `fsync`, we can improve our throughput.
+
+Intuitively, if we do 1/x the fsyncs, we should see 1/x the write latency.
+
+To achieve this, I vectorized the writing to the WAL. Writes are put in a queue, and the queue is flushed either after it is full or after a timeout. If our intuition is correct, a queue size of X should have a total latency of 1/X since we're doing 1/X the fsyncs.
+
+This intuition turns out to be true!
+
+Vectorized execution with queue size of 10 - **10x improvement**
 
 ```
 $ go test -bench=. -count 5
@@ -32,9 +56,7 @@ PASS
 ok      github.com/pawalt/kvstore       7.231s
 ```
 
-vectorized execution with queue size of 100 - **degraded performance**
-
-i've honestly got no idea why increasing the write queue size would incur a performance penalty. shit makes 0 sense to me.
+Vectorized execution with queue size of 50 - **50x improvement**
 
 ```
 $ go test -bench=. -count 5
@@ -42,11 +64,11 @@ goos: darwin
 goarch: amd64
 pkg: github.com/pawalt/kvstore
 cpu: VirtualApple @ 2.50GHz
-BenchmarkKeyWriting-10               100          13944411 ns/op
-BenchmarkKeyWriting-10               100          13615975 ns/op
-BenchmarkKeyWriting-10               100          13591150 ns/op
-BenchmarkKeyWriting-10               100          13576833 ns/op
-BenchmarkKeyWriting-10               100          13579472 ns/op
+BenchmarkKeyWriting-10              2559            39565 ns/op
+BenchmarkKeyWriting-10              3038            406752 ns/op
+BenchmarkKeyWriting-10              2992            398902 ns/op
+BenchmarkKeyWriting-10              2697            411237 ns/op
+BenchmarkKeyWriting-10              3001            409003 ns/op
 PASS
-ok      github.com/pawalt/kvstore       7.243s
+ok      github.com/pawalt/kvstore       6.411s
 ```

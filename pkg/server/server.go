@@ -18,7 +18,7 @@ const (
 	PORT             = 1337
 	PROTOCOL         = "tcp"
 	PUT_CHAN_SIZE    = 100
-	WRITE_QUEUE_SIZE = 20
+	WRITE_QUEUE_SIZE = 50
 )
 
 type KVServer struct {

@@ -11,8 +11,7 @@ import (
 	"github.com/pawalt/kvstore/pkg/server"
 )
 
-var num = 1000
-var CONCURRENCY = 20
+var CONCURRENCY = server.WRITE_QUEUE_SIZE * 2
 var KEYSPACE_SIZE = 100
 
 func BenchmarkKeyWriting(b *testing.B) {
