@@ -8,7 +8,29 @@ The goal here is to understand how `fsync` impacts performance.
 
 For this project, I have a nested key/value store. This is stored in-memory via a recursive struct. Nodes can both have values and children.
 
-Operations are persisted to disk via a Write-Ahead Log in the format `WRITE <keypath> <data>`.
+Operations are persisted to disk via a Write-Ahead Log in the format `WRITE\t<keypath>\t<data>`.
+
+## Usage
+
+```
+# in the server
+$ ./kvstore server "test.dat"
+INFO[0000] starting server
+
+# in the client
+$ ./kvstore client put "test/val" "this is a test val"  
+success
+
+$ ./kvstore client get "test/val"                     
+got data:
+this is a test val
+```
+
+This write is persisted in `test.dat` as follows:
+
+```
+WRITE	test/val	this is a test val
+```
 
 ## First Pass
 
