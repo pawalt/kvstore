@@ -1,11 +1,5 @@
 package server
 
-import (
-	"fmt"
-
-	"github.com/pawalt/kvstore/pkg/persist"
-)
-
 type GetRequest struct {
 	Path []string
 }
@@ -29,11 +23,20 @@ type PutResponse struct {
 }
 
 func (k *KVServer) Put(req *PutRequest, resp *PutResponse) error {
-	err := persist.WriteOp(k.file, k.writer, req.Path, req.Value)
-	if err != nil {
-		return fmt.Errorf("error while writing: %v", err)
+	// have to do producer/consumer pattern so we don't get concurrent
+	// file writes
+
+	putOp := PutOp{
+		req:      req,
+		respChan: make(chan error),
 	}
 
-	k.root.Put(req.Path, req.Value)
+	k.putChan <- &putOp
+
+	err := <-putOp.respChan
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

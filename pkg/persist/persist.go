@@ -13,7 +13,7 @@ func WriteOp(f *os.File, w *bufio.Writer, path []string, data []byte) error {
 	formatted := "WRITE\t" + strings.Join(path, "/") + "\t" + string(data) + "\n"
 	_, err := w.WriteString(formatted)
 	if err != nil {
-		return fmt.Errorf("error when writing to buffered reader", err)
+		return fmt.Errorf("error when writing to buffered reader: %v", err)
 	}
 
 	// flush to underlying writer
@@ -24,7 +24,6 @@ func WriteOp(f *os.File, w *bufio.Writer, path []string, data []byte) error {
 
 	// ensure disk persistence
 	err = f.Sync()
-	// getting "invalid argument" here. need to test that an fsync is ok
 	if err != nil {
 		return fmt.Errorf("error while syncing: %v", err)
 	}

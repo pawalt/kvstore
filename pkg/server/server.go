@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -13,14 +14,21 @@ import (
 )
 
 const (
-	PORT     = 1337
-	PROTOCOL = "tcp"
+	PORT          = 1337
+	PROTOCOL      = "tcp"
+	PUT_CHAN_SIZE = 100
 )
 
 type KVServer struct {
-	root   kv.KVNode
-	writer *bufio.Writer
-	file   *os.File
+	root    kv.KVNode
+	writer  *bufio.Writer
+	file    *os.File
+	putChan chan (*PutOp)
+}
+
+type PutOp struct {
+	req      *PutRequest
+	respChan chan (error)
 }
 
 func New(filePath string) (*KVServer, error) {
@@ -37,10 +45,13 @@ func New(filePath string) (*KVServer, error) {
 
 	w := bufio.NewWriter(f)
 
+	putChan := make(chan (*PutOp), PUT_CHAN_SIZE)
+
 	return &KVServer{
-		root:   rootNode,
-		writer: w,
-		file:   f,
+		root:    rootNode,
+		writer:  w,
+		file:    f,
+		putChan: putChan,
 	}, nil
 }
 
@@ -53,7 +64,28 @@ func (k *KVServer) Serve() error {
 		return err
 	}
 
-	http.Serve(l, nil)
+	go http.Serve(l, nil)
+	go k.handleWrites()
 
-	return nil
+	for {
+	}
+}
+
+func (k *KVServer) handleWrites() error {
+	for {
+		putOp := <-k.putChan
+		req := putOp.req
+
+		err := persist.WriteOp(k.file, k.writer, req.Path, req.Value)
+		if err != nil {
+			// if we have error, report it to client and move to next op
+			putOp.respChan <- fmt.Errorf("error while writing: %v", err)
+			continue
+		}
+
+		k.root.Put(req.Path, req.Value)
+
+		// if we have success, give nil to client
+		putOp.respChan <- nil
+	}
 }
